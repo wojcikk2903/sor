@@ -5,7 +5,7 @@
 #include "mpi.h"
 
 
-const double DELTA = 1e-10;
+const double DELTA = 1e-3;
 const int TRUE = 1;
 const int FALSE = 0;
 
@@ -40,12 +40,13 @@ void forward_subst(matrix *m, double *x, double *b)
         el_ind = i < m->n-1 ? m->row_start_ind[i+1]-1 : m->nelements-1;
         col = m->col_ind[el_ind];
         double accumulated = 0.0;
-        while (col > i-1)
+        while (col > m->n-i-1)
         {
             accumulated += m->vals[el_ind]*x[col];
             el_ind--;
             col = m->col_ind[el_ind];
         }
+        printf("accumulated = %.2f\n", accumulated);
         x[m->n-1-i] = (b[i]-accumulated)/m->vals[el_ind];
     }
 }
@@ -85,9 +86,9 @@ void test()
     if (!all_passed)
         printf("Coś nie tak\n");
     else
-        printf("\n\n----------------------------\n\n\tWszystko w porządku\n\n----------------------------\n\n");
+        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
 
-    printf("\n\n------------------------------\n\n\tPodstawianie w przód\n\n---------------------------------\n\n");
+    printf("\n------------------------------\n\tPodstawianie w przód\n---------------------------------\n");
     double vals2[] = { 2.0, 1.0, 3.0};
     int col_ind2[] = {1, 0, 1};
     int row_start_ind2[] = {0, 1};
@@ -122,11 +123,19 @@ void test()
     printf("x2[0] = %.2f\n", vector3[0]);
     printf("x2[1] = %.2f\n", vector3[1]);
     printf("x2[2] = %.2f\n", vector3[2]);
+    if (!double_equals(-3.833, vector3[0]))
+        all_passed = FALSE;
+    if (!double_equals(-3.833, vector3[0]))
+        all_passed = FALSE;
+    if (!double_equals(0.833, vector3[1]))
+        all_passed = FALSE;
+    if (!double_equals(0.333, vector3[2]))
+        all_passed = FALSE;
     
     if (!all_passed)
         printf("Coś nie tak\n");
     else
-        printf("\n\n----------------------------\n\n\tWszystko w porządku\n\n----------------------------\n\n");
+        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
 }
 
 int main(int argc, char *argv[])
