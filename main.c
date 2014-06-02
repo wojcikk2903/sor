@@ -31,23 +31,25 @@ double mul_matrix_row_ind(matrix *m, double *vector, int row_ind)
 
 void forward_subst(matrix *m, double *x, double *b)
 {
-    int el_ind = m->row_start_ind[1]-1;
-    int col = m->col_ind[el_ind];
-    x[m->n-1] = b[0]/m->vals[el_ind];
+    int el_ind = 0;
+    int col = 0;
+    // x[m->n-1] = b[0]/m->vals[el_ind];
+    x[0] = b[0]/m->vals[el_ind];
 
     for (int i = 1; i < m->n; i++)
     {
-        el_ind = i < m->n-1 ? m->row_start_ind[i+1]-1 : m->nelements-1;
-        col = m->col_ind[el_ind];
+        // el_ind = i < m->n-1 ? m->row_start_ind[i+1]-1 : m->nelements-1;
+        el_ind = m->row_start_ind[i];
+        // col = m->col_ind[el_ind];
+         col = m->col_ind[el_ind];
         double accumulated = 0.0;
-        while (col > m->n-i-1)
+        while (col < i)
         {
             accumulated += m->vals[el_ind]*x[col];
-            el_ind--;
+            el_ind++;
             col = m->col_ind[el_ind];
         }
-        printf("accumulated = %.2f\n", accumulated);
-        x[m->n-1-i] = (b[i]-accumulated)/m->vals[el_ind];
+        x[i] = (b[i]-accumulated)/m->vals[el_ind];
     }
 }
 
@@ -90,7 +92,7 @@ void test()
 
     printf("\n------------------------------\n\tPodstawianie w przód\n---------------------------------\n");
     double vals2[] = { 2.0, 1.0, 3.0};
-    int col_ind2[] = {1, 0, 1};
+    int col_ind2[] = {0, 0, 1};
     int row_start_ind2[] = {0, 1};
     m.vals = vals2;
     m.n = 2;
@@ -104,13 +106,13 @@ void test()
     printf("x[0] = %.2f\n", vector2[0]);
     printf("x[1] = %.2f\n", vector2[1]);
     all_passed = TRUE;
-    if (!double_equals(5.0, vector2[0]))
+    if (!double_equals(1.0, vector2[0]))
         all_passed = FALSE;
-    if (!double_equals(1.0, vector2[1]))
+    if (!double_equals(2.33, vector2[1]))
         all_passed = FALSE;
 
     double vals3[] = { 3.0, 2.0, 1.0, 1.0, 5.0, 8.0};
-    int col_ind3[] = {2, 1, 2, 0, 1, 2};
+    int col_ind3[] = {0, 0, 1, 0, 1, 2};
     int row_start_ind3[] = {0, 1, 3};
     m.vals = vals3;
     m.n = 3;
@@ -123,13 +125,12 @@ void test()
     printf("x2[0] = %.2f\n", vector3[0]);
     printf("x2[1] = %.2f\n", vector3[1]);
     printf("x2[2] = %.2f\n", vector3[2]);
-    if (!double_equals(-3.833, vector3[0]))
+    all_passed = TRUE;
+    if (!double_equals(0.333, vector3[0]))
         all_passed = FALSE;
-    if (!double_equals(-3.833, vector3[0]))
+    if (!double_equals(1.333, vector3[1]))
         all_passed = FALSE;
-    if (!double_equals(0.833, vector3[1]))
-        all_passed = FALSE;
-    if (!double_equals(0.333, vector3[2]))
+    if (!double_equals(-0.5, vector3[2]))
         all_passed = FALSE;
     
     if (!all_passed)
