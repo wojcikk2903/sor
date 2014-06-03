@@ -47,7 +47,7 @@ int find_diag_el_ind(matrix *a, int row)
     return el_ind;
 }
 
-matrix get_iterative_matrix1(matrix *a, double w)
+matrix get_iterative_lower_matrix(matrix *a, double w)
 {
     matrix it_matrix;
     matrix am = *a;
@@ -64,12 +64,40 @@ matrix get_iterative_matrix1(matrix *a, double w)
         it_matrix.row_start_ind[i] = it_el_ind;
         for (int j = am.row_start_ind[i]; j < diag_el_ind; j++)
         {
+            it_matrix.vals[it_el_ind] = w*am.vals[j]/diag_el_value;
+            it_matrix.col_ind[it_el_ind] = am.col_ind[j];
+            it_el_ind++;
+        }
+        it_matrix.vals[it_el_ind++] = 1+w;
+    }
+
+    return it_matrix;
+}
+
+matrix get_iterative_upper_matrix(matrix *a, double w)
+{
+    matrix it_matrix;
+    matrix am = *a;
+    it_matrix.vals = malloc(am.nelements*sizeof(double));
+    it_matrix.col_ind = malloc(am.nelements*sizeof(int));
+    it_matrix.row_start_ind = malloc(am.n*sizeof(int));
+
+    int it_el_ind = 0;
+    for (int i = 0; i < am.n-1; i++)
+    {
+        int diag_el_ind = find_diag_el_ind(a, i);
+        double diag_el_value = am.vals[diag_el_ind];
+        
+        it_matrix.row_start_ind[i] = it_el_ind;
+        it_matrix.vals[it_el_ind++] = 1-2*w;
+        for (int j = diag_el_ind+1; j < am.row_start_ind[i+1]; j++)
+        {
             it_matrix.vals[it_el_ind] = -w*am.vals[j]/diag_el_value;
             it_matrix.col_ind[it_el_ind] = am.col_ind[j];
             it_el_ind++;
         }
-        it_matrix.vals[it_el_ind++] = 1-2*w;
     }
+    it_matrix.vals[it_el_ind] = 1-2*w;
 
     return it_matrix;
 }

@@ -44,6 +44,78 @@ void mul_matrix_row_ind_test()
 
 }
 
+void find_upper_iterative_matrix_test()
+{
+    printf("\n--------------------------------\n\tSzukanie górnej macierzy do iteracji\n-----------------------\n");
+    matrix m;
+    double vals4[] = { 3.0, 1.0, 2.0, 1.0, 5.0, 8.0};
+    int col_ind4[] = {0, 1, 2, 0, 1, 2};
+    int row_start_ind4[] = {0, 1, 3};
+    m.vals = vals4;
+    m.n = 3;
+    m.nelements = 6;
+    m.col_ind = col_ind4;
+    m.row_start_ind = row_start_ind4;
+    matrix it_matrix1 = get_iterative_upper_matrix(&m, 1.5);
+    printf("m1.vals[0] = %.2f\n", it_matrix1.vals[0]);
+    printf("m1.vals[1] = %.2f\n", it_matrix1.vals[1]);
+    printf("m1.vals[2] = %.2f\n", it_matrix1.vals[2]);
+    printf("m1.vals[3] = %.2f\n", it_matrix1.vals[3]);
+
+    int all_passed = TRUE;
+    if (!double_equals(-2.0, it_matrix1.vals[0]))
+        all_passed = FALSE;
+    if (!double_equals(-2.0, it_matrix1.vals[1]))
+        all_passed = FALSE;
+    if (!double_equals(-3.0, it_matrix1.vals[2]))
+        all_passed = FALSE;
+    if (!double_equals(-2.0, it_matrix1.vals[3]))
+        all_passed = FALSE;
+    if (!all_passed)
+        printf("Coś nie tak\n");
+    else
+        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
+
+}
+
+
+void find_lower_iterative_matrix_test()
+{
+    printf("\n--------------------------------\n\tSzukanie dolnej macierzy do iteracji\n-----------------------\n");
+    matrix m;
+    double vals4[] = { 3.0, 1.0, 2.0, 1.0, 5.0, 8.0};
+    int col_ind4[] = {0, 1, 2, 0, 1, 2};
+    int row_start_ind4[] = {0, 1, 3};
+    m.vals = vals4;
+    m.n = 3;
+    m.nelements = 6;
+    m.col_ind = col_ind4;
+    m.row_start_ind = row_start_ind4;
+    matrix it_matrix1 = get_iterative_lower_matrix(&m, 1.5);
+    printf("m1.vals[0] = %.2f\n", it_matrix1.vals[0]);
+    printf("m1.vals[1] = %.2f\n", it_matrix1.vals[1]);
+    printf("m1.vals[2] = %.2f\n", it_matrix1.vals[2]);
+    printf("m1.vals[3] = %.2f\n", it_matrix1.vals[3]);
+    printf("m1.vals[4] = %.2f\n", it_matrix1.vals[4]);
+
+    int all_passed = TRUE;
+    if (!double_equals(2.5, it_matrix1.vals[0]))
+        all_passed = FALSE;
+    if (!double_equals(2.5, it_matrix1.vals[1]))
+        all_passed = FALSE;
+    if (!double_equals(0.1875, it_matrix1.vals[2]))
+        all_passed = FALSE;
+    if (!double_equals(0.9375, it_matrix1.vals[3]))
+        all_passed = FALSE;
+    if (!double_equals(2.5, it_matrix1.vals[4]))
+        all_passed = FALSE;
+    if (!all_passed)
+        printf("Coś nie tak\n");
+    else
+        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
+
+}
+
 void test()
 {
     matrix m;
@@ -98,34 +170,6 @@ void test()
     else
         printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
 
-    printf("\n--------------------------------\n\tSzukanie pierwszej macierzy do iteracji\n-----------------------\n");
-    double vals4[] = { 3.0, 1.0, 2.0, 1.0, 5.0, 8.0};
-    int col_ind4[] = {0, 1, 2, 0, 1, 2};
-    int row_start_ind4[] = {0, 1, 3};
-    m.vals = vals4;
-    m.n = 3;
-    m.nelements = 6;
-    m.col_ind = col_ind4;
-    m.row_start_ind = row_start_ind4;
-    matrix it_matrix1 = get_iterative_matrix1(&m, 1.5);
-    printf("m1.vals[0] = %.2f\n", it_matrix1.vals[0]);
-    printf("m1.vals[1] = %.2f\n", it_matrix1.vals[1]);
-    printf("m1.vals[2] = %.2f\n", it_matrix1.vals[2]);
-    printf("m1.vals[3] = %.2f\n", it_matrix1.vals[3]);
-    printf("m1.vals[4] = %.2f\n", it_matrix1.vals[4]);
-    all_passed = TRUE;
-    if (!double_equals(-2.0, it_matrix1.vals[0]))
-        all_passed = FALSE;
-    if (!double_equals(-2.0, it_matrix1.vals[1]))
-        all_passed = FALSE;
-    if (!double_equals(-0.1875, it_matrix1.vals[2]))
-        all_passed = FALSE;
-    if (!double_equals(-0.9375, it_matrix1.vals[3]))
-        all_passed = FALSE;
-    if (!double_equals(-2.0, it_matrix1.vals[4]))
-        all_passed = FALSE;
-    if (!all_passed)
-        printf("Coś nie tak\n");
-    else
-        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
+    find_upper_iterative_matrix_test();
+    find_lower_iterative_matrix_test();
 }
