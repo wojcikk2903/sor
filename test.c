@@ -116,6 +116,69 @@ void find_lower_iterative_matrix_test()
 
 }
 
+
+void find_iterative_vector_test()
+{
+    printf("\n-------------------------------\n\tSzukanie wektora do iteracji wD^-1*b\n------------------------\n");
+    matrix m;
+    double vals4[] = { 3.0, 1.0, 2.0, 1.0, 5.0, 8.0};
+    int col_ind4[] = {0, 1, 2, 0, 1, 2};
+    int row_start_ind4[] = {0, 1, 3};
+    m.vals = vals4;
+    m.n = 3;
+    m.nelements = 6;
+    m.col_ind = col_ind4;
+    m.row_start_ind = row_start_ind4;
+    double b[] = {1.0, 2.0, 3.0};
+    double *it_vec = get_iterative_vector(&m, 1.5, b);
+    printf("it_vec[0] = %.2f\n", it_vec[0]);
+    printf("it_vec[1] = %.2f\n", it_vec[1]);
+    printf("it_vec[2] = %.2f\n", it_vec[2]);
+
+    int all_passed = TRUE;
+    if (!double_equals(0.5, it_vec[0]))
+        all_passed = FALSE;
+    if (!double_equals(3.0, it_vec[1]))
+        all_passed = FALSE;
+    if (!double_equals(0.5625, it_vec[2]))
+        all_passed = FALSE;
+    if (!all_passed)
+        printf("Coś nie tak\n");
+    else
+        printf("\n----------------------------\n\tWszystko w porządku\n----------------------------\n");
+}
+
+void solve_system()
+{
+    printf("\n---------------------------------\n\tPrzykładowy układ\n----------------------------\n");
+    matrix m;
+    double vals[] = { 3.0, 1.0, 2.0, 1.0, 5.0, 8.0};
+    int col_ind[] = {0, 1, 2, 0, 1, 2};
+    int row_start_ind[] = {0, 1, 3};
+    m.vals = vals;
+    m.n = 3;
+    m.nelements = 6;
+    m.col_ind = col_ind;
+    m.row_start_ind = row_start_ind;
+
+    double b[] = {1.0, 2.0, 3.0};
+    double x[] = {1.0, 1.0, 1.0};
+    double z[3];
+    double y[3];
+    double w = 1.5;
+
+    matrix lower_iterative = get_iterative_lower_matrix(&m, w);
+    matrix upper_iterative = get_iterative_upper_matrix(&m, w);
+    double *iterative_vector = get_iterative_vector(&m, w, b);
+    mul_matrix_row(&upper_iterative, x, z, 0, 3);
+    add_vector(z, iterative_vector, m.n);
+    forward_subst(&lower_iterative, y, z);
+
+    printf("y[0] = %.2f\n", y[0]);
+    printf("y[1] = %.2f\n", y[1]);
+    printf("y[2] = %.2f\n", y[2]);
+}
+
 void test()
 {
     matrix m;
@@ -172,4 +235,6 @@ void test()
 
     find_upper_iterative_matrix_test();
     find_lower_iterative_matrix_test();
+    find_iterative_vector_test();
+    solve_system();
 }
