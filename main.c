@@ -75,10 +75,13 @@ matrix get_iterative_lower_matrix(matrix *a, double w)
             it_matrix.col_ind[it_el_ind] = am.col_ind[j];
             it_el_ind++;
         }
-        it_matrix.vals[it_el_ind++] = 1+w;
+        // it_matrix.vals[it_el_ind++] = 1+w;
+        it_matrix.vals[it_el_ind] = 1;
+        it_matrix.col_ind[it_el_ind] = i;
+        it_el_ind++;
     }
     it_matrix.nelements = it_el_ind;
-    it_matrix.row_start_ind[am.n-1] = it_el_ind-1;
+    // it_matrix.row_start_ind[am.n-1] = it_el_ind-1;
 
     return it_matrix;
 }
@@ -98,9 +101,9 @@ matrix get_iterative_upper_matrix(matrix *a, double w)
         int diag_el_ind = find_diag_el_ind(a, i);
         double diag_el_value = am.vals[diag_el_ind];
         
-        printf("i = %i, it_el_ind = %i\n", i, it_el_ind);
         it_matrix.row_start_ind[i] = it_el_ind;
-        it_matrix.vals[it_el_ind] = 1-2*w;
+        // it_matrix.vals[it_el_ind] = 1-2*w;
+        it_matrix.vals[it_el_ind] = 1-w;
         it_matrix.col_ind[it_el_ind] = i;
         it_el_ind++;
         for (int j = diag_el_ind+1; j < am.row_start_ind[i+1]; j++)
@@ -110,7 +113,8 @@ matrix get_iterative_upper_matrix(matrix *a, double w)
             it_el_ind++;
         }
     }
-    it_matrix.vals[it_el_ind] = 1-2*w;
+    // it_matrix.vals[it_el_ind] = 1-2*w;
+    it_matrix.vals[it_el_ind] = 1-w;
     it_matrix.col_ind[it_el_ind] = am.n-1;
     it_matrix.nelements = it_el_ind+1;
     it_matrix.row_start_ind[am.n-1] = it_el_ind;
@@ -143,17 +147,18 @@ void iteration_step(matrix lower_matrix, matrix upper_matrix, double *x, int xn,
 
 int main(int argc, char *argv[])
 {
+#ifndef DEBUG
     int nproc;
     int rank;
-
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    #ifdef DEBUG
-    if (rank == 0) 
-        test();
-    #endif
     MPI_Finalize();
+#endif
+
+#ifdef DEBUG
+    test();
+#endif
     return 0;
 }
