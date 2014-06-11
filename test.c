@@ -403,6 +403,38 @@ void solve_system()
     printf("y[2] = %.2f\n", y[2]);
 }
 
+void solve_system_hard()
+{
+    printf("\n---------------------------------\n\tPrzykładowy układ 4x4\n----------------------------\n");
+    matrix m;
+    double vals[] = {10.0, -1.0, 2.0, -1.0, 11.0, -1.0, 3.0, 2.0, -1.0, 10.0, -1.0, 3.0, -1.0, 8.0};
+    int col_ind[] = {0, 1, 2, 0, 1, 2, 3, 0, 1, 2, 3, 1, 2, 3};
+    int row_start_ind[] = {0, 3, 7, 11};
+    m.vals = vals;
+    m.n = 4;
+    m.nelements = 14;
+    m.col_ind = col_ind;
+    m.row_start_ind = row_start_ind;
+
+    double b[] = {6.0, 25.0, -11.0, 15.0};
+    double x[] = {0.0, 0.0, 0.0, 0.0};
+    double z[4];
+    double y[4];
+    double w = 1.0;
+
+    matrix lower_iterative = get_iterative_lower_matrix(&m, w);
+    matrix upper_iterative = get_iterative_upper_matrix(&m, w);
+    double *iterative_vector = get_iterative_vector(&m, w, b);
+    mul_matrix_row(&upper_iterative, x, z, 0, 3);
+    add_vector(z, iterative_vector, m.n);
+    forward_subst(&lower_iterative, y, z);
+
+    printf("y[0] = %.4f\n", y[0]);
+    printf("y[1] = %.4f\n", y[1]);
+    printf("y[2] = %.4f\n", y[2]);
+    printf("y[3] = %.4f\n", y[3]);
+}
+
 void forward_subst_simple_test()
 {
     printf("\n---------------------------------\n\tPodstawianie w przód 2x2\n----------------------------\n");
@@ -501,4 +533,5 @@ void test()
     find_z_simple();
     find_next_x();
     forward_subst_simple_test();
+    solve_system_hard();
 }

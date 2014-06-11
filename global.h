@@ -1,5 +1,6 @@
 #ifndef GLOBAL_SOR
 #define GLOBAL_SOR
+#include <stdio.h>
 
 typedef struct _matrix {
     double *vals;
@@ -18,4 +19,5 @@ matrix get_iterative_lower_matrix(matrix *a, double w);
 double* get_iterative_vector(matrix *a, double w, double *b);
 void mul_matrix_row(matrix *m, double *vector, double *out, int start_row, int end_row);
 void add_vector(double *x, double *b, int n);
+matrix create_matrix_from_file(FILE *in);
 #endif

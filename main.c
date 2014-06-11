@@ -158,7 +158,13 @@ int main(int argc, char *argv[])
 #endif
 
 #ifdef DEBUG
-    test();
+    // test();
+    FILE *f = argc > 1 ? fopen(argv[1], "r") : fopen("matrixA.dat", "r"); 
+    matrix m = create_matrix_from_file(f);
+    for (int i = 0; i < m.n; i++)
+        printf("row_start[%i] = %i\n", i, m.row_start_ind[i]);
+    for (int i = 0; i < m.nelements; i++)
+        printf("val[%i] = %.2f\tcol_ind[%i] = %i\n", i, m.vals[i], i, m.col_ind[i]);
 #endif
     return 0;
 }
