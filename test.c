@@ -351,25 +351,9 @@ void solve_simple_system()
 
     double b[] = {11.0, 13.0};
     double x[] = {1.0, 1.0};
-    double z[2];
-    double y[2];
-    double w = 1.0;
-
-    matrix lower_iterative = get_iterative_lower_matrix(&m, w);
-    matrix upper_iterative = get_iterative_upper_matrix(&m, w);
-    double *iterative_vector = get_iterative_vector(&m, w, b);
-
-    for (int i = 0; i < 10; i++ )
-    {
-        mul_matrix_row(&upper_iterative, x, z, 0, 2);
-        add_vector(z, iterative_vector, m.n);
-        forward_subst(&lower_iterative, y, z);
-        x[0] = y[0];
-        x[1] = y[1];
-        printf("y[0] = %.2f\n", y[0]);
-        printf("y[1] = %.2f\n\n", y[1]);
-    }
-
+    solve(&m, x, b);
+    printf("x[0] = %.2f\n", x[0]);
+    printf("x[1] = %.2f\n", x[1]);
 }
 
 void solve_system()

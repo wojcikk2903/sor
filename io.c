@@ -5,10 +5,6 @@
 
 #define EL_SIZE 100000
 
-typedef struct _values {
-    double *v;
-    int n;
-} values;
 
 typedef struct _indices {
     int *ind;
@@ -100,7 +96,8 @@ indices compress_row_ind(int *row_ind, int nel, int nrow)
     {
         if (row_ind[i] != prev_row_ind)
         {
-            row_start[ri++] = i;
+            row_start[ri] = i;
+            ri++;
             prev_row_ind = row_ind[i];
         }
     }
@@ -108,6 +105,13 @@ indices compress_row_ind(int *row_ind, int nel, int nrow)
     row_start_ind.n = nrow;
     row_start_ind.ind = row_start;
     return row_start_ind;
+}
+
+values create_vector_from_file(FILE *in)
+{
+    omit_beginning(in);
+    values v = read_vals(in);
+    return v;
 }
 
 matrix create_matrix_from_file(FILE *in)
@@ -160,7 +164,6 @@ matrix create_matrix_from_file_nieuzywane(FILE *in)
 
     double new_values[EL_SIZE];
     int new_row_ind[EL_SIZE];
-    // int new_col_start[EL_SIZE];
 
     for (int i = 0; i < col_start.n-1; i++)
     {
@@ -175,7 +178,6 @@ matrix create_matrix_from_file_nieuzywane(FILE *in)
     matrix m;
     m.vals = new_values;
     m.col_ind = new_row_ind;
-    // m.row_start_ind = new_col_start
     m.nelements = v.n;
     m.n = col_start.n;
     return m;

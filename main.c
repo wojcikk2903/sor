@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "mpi.h"
 #include "global.h"
 
 double mul_matrix_row_ind(matrix *m, double *vector, int row_ind)
@@ -75,24 +74,23 @@ matrix get_iterative_lower_matrix(matrix *a, double w)
             it_matrix.col_ind[it_el_ind] = am.col_ind[j];
             it_el_ind++;
         }
-        // it_matrix.vals[it_el_ind++] = 1+w;
         it_matrix.vals[it_el_ind] = 1;
         it_matrix.col_ind[it_el_ind] = i;
         it_el_ind++;
     }
     it_matrix.nelements = it_el_ind;
-    // it_matrix.row_start_ind[am.n-1] = it_el_ind-1;
 
     return it_matrix;
 }
 
 matrix get_iterative_upper_matrix(matrix *a, double w)
 {
-    matrix it_matrix;
+    matrix *it_matrix_upper = malloc(sizeof(*it_matrix_upper));
+    matrix it_matrix = *it_matrix_upper;
     matrix am = *a;
-    it_matrix.vals = malloc(am.nelements*sizeof(double));
     it_matrix.col_ind = malloc(am.nelements*sizeof(int));
     it_matrix.row_start_ind = malloc(am.n*sizeof(int));
+    it_matrix.vals = malloc(am.nelements*sizeof(double));
     it_matrix.n = am.n;
 
     int it_el_ind = 0;
@@ -102,7 +100,6 @@ matrix get_iterative_upper_matrix(matrix *a, double w)
         double diag_el_value = am.vals[diag_el_ind];
         
         it_matrix.row_start_ind[i] = it_el_ind;
-        // it_matrix.vals[it_el_ind] = 1-2*w;
         it_matrix.vals[it_el_ind] = 1-w;
         it_matrix.col_ind[it_el_ind] = i;
         it_el_ind++;
@@ -113,7 +110,6 @@ matrix get_iterative_upper_matrix(matrix *a, double w)
             it_el_ind++;
         }
     }
-    // it_matrix.vals[it_el_ind] = 1-2*w;
     it_matrix.vals[it_el_ind] = 1-w;
     it_matrix.col_ind[it_el_ind] = am.n-1;
     it_matrix.nelements = it_el_ind+1;
@@ -140,9 +136,21 @@ void add_vector(double *x, double *b, int n)
         x[i] += b[i];
 }
 
-void iteration_step(matrix lower_matrix, matrix upper_matrix, double *x, int xn, double *b)
+void solve(matrix *a, double *x, double *b)
 {
+    double w = 1.0;
+    int steps = 1000;
+    double *it_vec = get_iterative_vector(a, w, b);
+    matrix upper = get_iterative_upper_matrix(a, w);
+    matrix lower = get_iterative_lower_matrix(a, w);
+    double *z = malloc(a->n*sizeof(*z));
 
+    for (int i = 0; i < steps; i++)
+    {
+        mul_matrix_row(&upper, x, z, 0, a->n);
+        add_vector(z, it_vec, a->n);
+        forward_subst(&lower, x, z);
+    }
 }
 
 int main(int argc, char *argv[])
@@ -159,12 +167,17 @@ int main(int argc, char *argv[])
 
 #ifdef DEBUG
     // test();
-    FILE *f = argc > 1 ? fopen(argv[1], "r") : fopen("matrixA.dat", "r"); 
-    matrix m = create_matrix_from_file(f);
+    FILE *fm = argc > 1 ? fopen(argv[1], "r") : fopen("matrixA.dat", "r"); 
+    FILE *fv = argc > 2 ? fopen(argv[2], "r") : fopen("vectorB.dat", "r"); 
+    matrix m = create_matrix_from_file(fm);
+    values vector = create_vector_from_file(fv);
+
+    double *x = malloc(m.n*sizeof(double));
     for (int i = 0; i < m.n; i++)
-        printf("row_start[%i] = %i\n", i, m.row_start_ind[i]);
-    for (int i = 0; i < m.nelements; i++)
-        printf("val[%i] = %.2f\tcol_ind[%i] = %i\n", i, m.vals[i], i, m.col_ind[i]);
+        x[i] = 1.0;
+    solve(&m, x, vector.v);
+    for (int i = 0; i < m.n; i++)
+        printf("%f\n", x[i]);
 #endif
     return 0;
 }
