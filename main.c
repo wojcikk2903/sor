@@ -2,7 +2,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "mpi.h"
 #include "global.h"
+
+int tag = 99;
+
+typedef struct _range {
+    int begin;
+    int end;
+} range;
 
 double mul_matrix_row_ind(matrix *m, double *vector, int row_ind)
 {
@@ -153,6 +161,106 @@ void solve(matrix *a, double *x, double *b)
     }
 }
 
+range compute_range(int nrows, int nchild, int child_id)
+{
+    range r;
+    int rows_per_child = nrows / nchild;
+    int rest  = nrows % nchild;
+    r.begin = child_id * rows_per_child + 
+        (child_id < rest ? child_id : rest);
+    r.end = r.begin + rows_per_child + (child_id < rest ? 1 : 0);
+    printf("nrows = %i\n", nrows);
+    printf("nchild = %i\n", nchild);
+    printf("child_id = %i\n", child_id);
+    printf("rows_per_child = %i\n", rows_per_child);
+    printf("rest = %i\n", rest);
+    printf("r.begin = %i\n", r.begin);
+    printf("r.end = %i\n", r.end);
+    return r;
+}
+
+void send_matrix(matrix send, int child_id)
+{
+    MPI_Send(&send.n, 1, MPI_INT, child_id, tag, MPI_COMM_WORLD);
+    MPI_Send(&send.nelements, 1, MPI_INT, child_id, tag, MPI_COMM_WORLD);
+    MPI_Send(send.vals, send.nelements, MPI_DOUBLE, child_id, tag, MPI_COMM_WORLD);
+    MPI_Send(send.col_ind, send.nelements, MPI_INT, child_id, tag, MPI_COMM_WORLD);
+    MPI_Send(send.row_start_ind, send.n, MPI_INT, child_id, tag, MPI_COMM_WORLD);
+}
+
+void send_values(double *v, int n, int child_id)
+{
+    MPI_Send(&n, 1, MPI_INT, child_id, tag, MPI_COMM_WORLD);
+    MPI_Send(v, n, MPI_DOUBLE, child_id, tag, MPI_COMM_WORLD);
+}
+
+values receive_vector()
+{
+    MPI_Status status;
+    values v;
+    MPI_Recv(&v.n, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
+    v.v = malloc(v.n*sizeof(*v.v));
+    MPI_Recv(v.v, v.n, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status );
+    return v;
+}
+
+void wait_for_results(double *z, int n, int nproc, int child_id)
+{
+    MPI_Status status;
+    range r = compute_range(n, nproc, child_id);
+    MPI_Recv(z+r.begin, r.end-r.begin, MPI_DOUBLE, child_id, tag, MPI_COMM_WORLD, &status);
+}
+
+void solve_parallel(matrix *a, double *x, double *b, int nproc)
+{
+    double w = 1.0;
+    // int steps = 1000;
+    double *it_vec = get_iterative_vector(a, w, b);
+    matrix upper = get_iterative_upper_matrix(a, w);
+    matrix lower = get_iterative_lower_matrix(a, w);
+    double *z = malloc(a->n*sizeof(*z));
+
+    for (int i = 1; i < nproc; i++)
+        send_matrix(upper, i);
+
+    range r = compute_range(a->n, nproc, 0);
+    mul_matrix_row(&upper, x, z, r.begin, r.end);
+    for (int i = 1; i < nproc; i++)
+        send_values(x, a->n, i);
+
+    for (int i = 1; i < nproc; i++)
+        wait_for_results(z, a->n, nproc, i);
+
+    add_vector(z, it_vec, a->n);
+    forward_subst(&lower, x, z);
+    for (int i = 0; i < a->n; i++)
+        printf("x[i] = %.2f\n", x[i]);
+
+    // for (int i = 0; i < steps; i++)
+    // {
+    //     mul_matrix_row(&upper, x, z, 0, a->n);
+    //     add_vector(z, it_vec, a->n);
+    //     forward_subst(&lower, x, z);
+    // }
+}
+
+
+matrix receive_matrix()
+{
+    matrix rec;
+    MPI_Status status;
+    MPI_Recv(&rec.n, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
+    MPI_Recv(&rec.nelements, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
+    rec.vals = malloc(rec.nelements*sizeof(double));
+    rec.col_ind = malloc(rec.nelements*sizeof(int));
+    rec.row_start_ind = malloc(rec.n*sizeof(int));
+    MPI_Recv(rec.vals, rec.nelements, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status );
+    MPI_Recv(rec.col_ind, rec.nelements, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
+    MPI_Recv(rec.row_start_ind, rec.n, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
+    return rec;
+}
+
+
 int main(int argc, char *argv[])
 {
 #ifndef DEBUG
@@ -161,6 +269,29 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+    if (rank == 0)
+    {
+        FILE *fm = argc > 1 ? fopen(argv[1], "r") : fopen("matrixA.dat", "r"); 
+        FILE *fv = argc > 2 ? fopen(argv[2], "r") : fopen("vectorB.dat", "r"); 
+        matrix a = create_matrix_from_file(fm);
+        values b = create_vector_from_file(fv);
+
+        double *x = malloc(a.n*sizeof(double));
+        for (int i = 0; i < a.n; i++)
+            x[i] = 1.0;
+
+        solve_parallel(&a, x, b.v, nproc);
+    }
+    else
+    {
+        matrix m = receive_matrix();
+        values v = receive_vector();
+        double *z = malloc(v.n*sizeof(*z));
+        range r = compute_range(v.n, nproc, rank);
+        mul_matrix_row(&m, v.v, z, r.begin, r.end);
+        MPI_Send(z, r.end-r.begin, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+    }
 
     MPI_Finalize();
 #endif
