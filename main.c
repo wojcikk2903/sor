@@ -213,33 +213,30 @@ void wait_for_results(double *z, int n, int nproc, int child_id)
 void solve_parallel(matrix *a, double *x, double *b, int nproc)
 {
     double w = 1.0;
-    // int steps = 1000;
+    int steps = 2;
     double *it_vec = get_iterative_vector(a, w, b);
     matrix upper = get_iterative_upper_matrix(a, w);
     matrix lower = get_iterative_lower_matrix(a, w);
     double *z = malloc(a->n*sizeof(*z));
 
-    for (int i = 1; i < nproc; i++)
+
+    for (int i = 1; i < nproc; i++) 
         send_matrix(upper, i);
 
-    range r = compute_range(a->n, nproc, 0);
-    mul_matrix_row(&upper, x, z, r.begin, r.end);
-    for (int i = 1; i < nproc; i++)
-        send_values(x, a->n, i);
+    for (int s = 0; s < steps; s++)
+    {
+        for (int i = 1; i < nproc; i++) 
+            send_values(x, a->n, i);
+        range r = compute_range(a->n, nproc, 0);
+        mul_matrix_row(&upper, x, z, r.begin, r.end);
 
-    for (int i = 1; i < nproc; i++)
-        wait_for_results(z, a->n, nproc, i);
+        for (int i = 1; i < nproc; i++)
+            wait_for_results(z, a->n, nproc, i);
 
-    add_vector(z, it_vec, a->n);
-    forward_subst(&lower, x, z);
+        add_vector(z, it_vec, a->n);
+        forward_subst(&lower, x, z);
+    }
     print_vector(x, a->n);
-
-    // for (int i = 0; i < steps; i++)
-    // {
-    //     mul_matrix_row(&upper, x, z, 0, a->n);
-    //     add_vector(z, it_vec, a->n);
-    //     forward_subst(&lower, x, z);
-    // }
 }
 
 
@@ -285,18 +282,20 @@ int main(int argc, char *argv[])
         matrix a = create_matrix_from_file(fm);
         values b = create_vector_from_file(fv);
 
-        double *x = initialize_x(a.n, 1.0);
+        double *x = initialize_x(a.n, 0.0);
 
         solve_parallel(&a, x, b.v, nproc);
     }
     else
     {
         matrix m = receive_matrix();
-        values v = receive_vector();
-        double *z = malloc(v.n*sizeof(*z));
-        range r = compute_range(v.n, nproc, rank);
-        mul_matrix_row(&m, v.v, z, r.begin, r.end);
-        MPI_Send(z, r.end-r.begin, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+        double *z = malloc(m.n*sizeof(*z));
+        while (1){
+            values v = receive_vector();
+            range r = compute_range(v.n, nproc, rank);
+            mul_matrix_row(&m, v.v, z, r.begin, r.end);
+            MPI_Send(z+r.begin, r.end-r.begin, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
+        }
     }
 
     MPI_Finalize();
@@ -309,7 +308,7 @@ int main(int argc, char *argv[])
     matrix m = create_matrix_from_file(fm);
     values vector = create_vector_from_file(fv);
 
-    double *x = initialize_x(m.n, 1.0);
+    double *x = initialize_x(m.n, 0.0);
     solve(&m, x, vector.v);
     print_vector(x, m.n);
 #endif
