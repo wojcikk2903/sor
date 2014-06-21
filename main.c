@@ -6,6 +6,7 @@
 #include "global.h"
 
 int tag = 99;
+int exit_tag = 10;
 
 typedef struct _range {
     int begin;
@@ -193,14 +194,14 @@ void send_values(double *v, int n, int child_id)
     MPI_Send(v, n, MPI_DOUBLE, child_id, tag, MPI_COMM_WORLD);
 }
 
-values receive_vector()
+int receive_vector (values v)
 {
     MPI_Status status;
-    values v;
-    MPI_Recv(&v.n, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &status );
-    v.v = malloc(v.n*sizeof(*v.v));
-    MPI_Recv(v.v, v.n, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &status );
-    return v;
+    MPI_Recv(&v.n, 1, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+    if (status.MPI_TAG == exit_tag)
+        return exit_tag;
+    MPI_Recv(v.v, v.n, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status );
+    return status.MPI_TAG;
 }
 
 void wait_for_results(double *z, int n, int nproc, int child_id)
@@ -210,10 +211,16 @@ void wait_for_results(double *z, int n, int nproc, int child_id)
     MPI_Recv(z+r.begin, r.end-r.begin, MPI_DOUBLE, child_id, tag, MPI_COMM_WORLD, &status);
 }
 
-void solve_parallel(matrix *a, double *x, double *b, int nproc)
+void terminate_children (int nproc)
+{
+    // MPI_Abort(MPI_COMM_WORLD, 0);
+    for (int i = 1; i < nproc; i++)
+        MPI_Send(NULL, 0, MPI_DOUBLE, i, exit_tag, MPI_COMM_WORLD);
+}
+
+void solve_parallel(matrix *a, double *x, double *b, int nproc, int steps)
 {
     double w = 1.0;
-    int steps = 2;
     double *it_vec = get_iterative_vector(a, w, b);
     matrix upper = get_iterative_upper_matrix(a, w);
     matrix lower = get_iterative_lower_matrix(a, w);
@@ -236,7 +243,7 @@ void solve_parallel(matrix *a, double *x, double *b, int nproc)
         add_vector(z, it_vec, a->n);
         forward_subst(&lower, x, z);
     }
-    print_vector(x, a->n);
+    terminate_children(nproc);
 }
 
 
@@ -279,19 +286,25 @@ int main(int argc, char *argv[])
     {
         FILE *fm = argc > 1 ? fopen(argv[1], "r") : fopen("matrixA.dat", "r"); 
         FILE *fv = argc > 2 ? fopen(argv[2], "r") : fopen("vectorB.dat", "r"); 
+        int steps = argc > 3 ? atof(argv[3]) : 1;
         matrix a = create_matrix_from_file(fm);
         values b = create_vector_from_file(fv);
 
         double *x = initialize_x(a.n, 0.0);
 
-        solve_parallel(&a, x, b.v, nproc);
+        solve_parallel(&a, x, b.v, nproc, steps);
+        print_vector(x, a.n);
     }
     else
     {
         matrix m = receive_matrix();
         double *z = malloc(m.n*sizeof(*z));
-        while (1){
-            values v = receive_vector();
+        values v;
+        v.n = m.n;
+        v.v = malloc(v.n*sizeof(*v.v));
+        while (1) {
+            if (receive_vector(v) == exit_tag)
+                break;
             range r = compute_range(v.n, nproc, rank);
             mul_matrix_row(&m, v.v, z, r.begin, r.end);
             MPI_Send(z+r.begin, r.end-r.begin, MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
