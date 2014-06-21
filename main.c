@@ -12,6 +12,12 @@ typedef struct _range {
     int end;
 } range;
 
+void print_vector(double *x, int n)
+{
+    for (int i = 0; i < n; i++)
+        printf("%f\n", x[i]);
+}
+
 double mul_matrix_row_ind(matrix *m, double *vector, int row_ind)
 {
     int cur_row_start = m->row_start_ind[row_ind];
@@ -169,13 +175,6 @@ range compute_range(int nrows, int nchild, int child_id)
     r.begin = child_id * rows_per_child + 
         (child_id < rest ? child_id : rest);
     r.end = r.begin + rows_per_child + (child_id < rest ? 1 : 0);
-    printf("nrows = %i\n", nrows);
-    printf("nchild = %i\n", nchild);
-    printf("child_id = %i\n", child_id);
-    printf("rows_per_child = %i\n", rows_per_child);
-    printf("rest = %i\n", rest);
-    printf("r.begin = %i\n", r.begin);
-    printf("r.end = %i\n", r.end);
     return r;
 }
 
@@ -233,8 +232,7 @@ void solve_parallel(matrix *a, double *x, double *b, int nproc)
 
     add_vector(z, it_vec, a->n);
     forward_subst(&lower, x, z);
-    for (int i = 0; i < a->n; i++)
-        printf("x[i] = %.2f\n", x[i]);
+    print_vector(x, a->n);
 
     // for (int i = 0; i < steps; i++)
     // {
@@ -260,6 +258,16 @@ matrix receive_matrix()
     return rec;
 }
 
+double* initialize_x(int n, double initial_value)
+{
+    double *x = malloc(n*sizeof(double));
+    for (int i = 0; i < n; i++)
+        x[i] = initial_value;
+
+    return x;
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -277,9 +285,7 @@ int main(int argc, char *argv[])
         matrix a = create_matrix_from_file(fm);
         values b = create_vector_from_file(fv);
 
-        double *x = malloc(a.n*sizeof(double));
-        for (int i = 0; i < a.n; i++)
-            x[i] = 1.0;
+        double *x = initialize_x(a.n, 1.0);
 
         solve_parallel(&a, x, b.v, nproc);
     }
@@ -303,12 +309,9 @@ int main(int argc, char *argv[])
     matrix m = create_matrix_from_file(fm);
     values vector = create_vector_from_file(fv);
 
-    double *x = malloc(m.n*sizeof(double));
-    for (int i = 0; i < m.n; i++)
-        x[i] = 1.0;
+    double *x = initialize_x(m.n, 1.0);
     solve(&m, x, vector.v);
-    for (int i = 0; i < m.n; i++)
-        printf("%f\n", x[i]);
+    print_vector(x, m.n);
 #endif
     return 0;
 }
